@@ -1,25 +1,60 @@
 # MyAgent
 
-按 `e:/opencode-dev/文档` 02-17 严格实现的 OpenCode 风格 Agent。
+按 opencode 架构文档实现的 OpenCode 风格 coding agent（TypeScript），附带一套
+**Windows 原生 SWE-bench 评测链路**（无 Docker / 无 WSL）。
+
+**当前成绩**：SWE-bench Verified 5 实例子集，glm-4.5-air（免费档）**3/5 RESOLVED**
+（glm-4-flash 同子集 0/5 对照）。全过程与 20+ 踩坑记录见
+[`SWE-BENCH-JOURNEY.md`](SWE-BENCH-JOURNEY.md)。
 
 ## 跑
 
 ```bash
 npm install
-npm start          # 交互式 CLI（mock provider）
-npx tsx src/test-e2e.ts   # 端到端冒烟测试（8 个场景）
-npm run typecheck         # 类型检查
+npx tsx src/test-e2e.ts        # 端到端冒烟测试（8 场景，mock provider，不耗 API）
+npm run typecheck              # 类型检查
 ```
 
-## 换真实模型（明天接 API key）
+## SWE-bench 快速上手
 
-模型调用现在是 mock（`src/provider/mock-provider.ts`），能完整跑通工具循环 / 权限 / 上下文 / 压缩。
-接真实模型时：
+```bash
+# 1. 预测（任意 OpenAI 兼容端点，--base-url 即插即用）
+MYAGENT_API_KEY=sk-xxx npx tsx src/bench/swebench-run.ts \
+  --dataset swebench_verified.jsonl \
+  --instances "pallets__flask-5014,psf__requests-1142" \
+  --provider zhipu --model glm-4.5-air \
+  --max-steps 40 --timeout-min 20 --temp 0.1 \
+  --out out/predictions.jsonl
 
-1. 新建 `src/provider/xxx-provider.ts`，实现 [`LLMProvider`](src/provider/llm.ts) 接口
-   （`stream(req, signal)` 产出 `LLMEvent`：`text-delta` / `reasoning-delta` / `tool-call` / `finish` / `error`）。
-2. 在 [`src/core/application.ts`](src/core/application.ts) 把 `readonly provider = new MockProvider();`
-   换成你的 provider，`AppOptions` 加上 `apiKey` 等字段即可。
+# 2. 评分（Windows 原生；SWE39_PYTHON 可覆盖解释器）
+SWE39_PYTHON="E:\swe-envs\py39raw\python.exe" python score_win.py out/predictions.jsonl
+```
+
+评分解释器环境搭建（**不要用 conda create**，见 journey 文档坑 17-19）：
+
+```bash
+python -c "import shutil; shutil.copytree(r'<conda pkgs>/python-3.9.18-*/', r'E:\swe-envs\py39raw')"
+E:\swe-envs\py39raw\python.exe -m ensurepip --upgrade
+cp <base-conda>/Library/bin/libssl-3-x64.dll <base-conda>/Library/bin/libcrypto-3-x64.dll E:\swe-envs\py39raw\
+E:\swe-envs\py39raw\python.exe -m pip install pytest==7.4.4 sqlparse asgiref tzdata trustme pytest-mock pytest-httpbin -i https://pypi.tuna.tsinghua.edu.cn/simple
+```
+
+## Provider
+
+| provider | 接法 | 说明 |
+| --- | --- | --- |
+| `mock` | 默认 | 完整工具循环 / 权限 / 上下文 / 压缩，不耗 API |
+| `zhipu` | `--provider zhipu` + `MYAGENT_API_KEY` | 智谱原生机（glm-4.5 系思考模型已适配 max_tokens） |
+| `openai` | `--provider openai --base-url <endpoint>` + key | 任意 OpenAI 兼容端点（DashScope / DeepSeek / SiliconFlow / 内网网关…） |
+
+## agent 内建评测向加固
+
+- **edit 模糊缩进匹配回退**：模型凭记忆打缩进错位时自动纠偏（Aider/Claude Code 同款）
+- **重复失败熔断**：同参同工具连续失败 ≥2 次，注入强制换策略警告（防 40 步烧光在幻觉代码上）
+- **评分前自查环节**（`--self-check`，默认开）：修复完成后 agent 自审 diff、清理临时脚本、
+  定向跑现有测试、修回归。测试范围 agent 自选，不接触评测集真值
+- **patch 提纯**：extractPatch 自动排除 agent 自建的 `test_*.py` / `reproduce_*.py` 等临时脚本
+- 思考模型适配：max_tokens 保底 8192（reasoning_content 也计入预算）
 
 ## 架构映射
 
