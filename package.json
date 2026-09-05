@@ -1,0 +1,19 @@
+{
+  "name": "my-agent",
+  "version": "0.1.0",
+  "description": "OpenCode-style agent implemented strictly per e:/opencode-dev/文档",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "tsx src/index.ts",
+    "demo": "tsx src/index.ts",
+    "swebench": "tsx src/bench/swebench-run.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {},
+  "devDependencies": {
+    "@types/node": "^20.11.0",
+    "tsx": "^4.7.0",
+    "typescript": "^5.3.0"
+  }
+}
