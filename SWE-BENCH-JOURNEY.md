@@ -357,6 +357,17 @@ psf__requests-1724:   NO PATCH
 **django-10554 是真失败**：模型 patch 引入 IndentationError（缩进不匹配），导致整个测试
 进程崩溃。这类"patch 语法坏掉"的问题，自查环节应能捕获（跑测试即崩，报错直接可见）。
 
+**requests-1724 深挖（py2 时代的幽灵题）**：
+- air 版 NO PATCH 的根因：模型幻觉了新版 requests 的代码（`req.method = method.upper()`，
+  2.0 版 api.py 里不存在），同一失败 edit 重试 40 次烧光预算。→ 已给 agent 加
+  **重复失败熔断**（turn.ts：同参同工具连续失败 ≥2 次，tool-result 注入换策略警告）
+- flash + 熔断 + 自查重试：产出了 621B 有效 patch（models.py prepare_method，方向正确），
+  NO PATCH 问题解决；但 patch 里写了 py2 写法 `isinstance(self.method, unicode)`
+  → py3 上 NameError，把 6 个 F2P 全炸
+- 评分器判 ENV_BROKEN 是**正确行为**：该题的 bug 是 py2 专属（unicode method 名），在
+  py3 基线上 F2P 天生全过，无法评判。native py3 环境下此题应视为跳过项
+
+
 **顺带的 agent 改进**：django-10097 的 patch 里混入了 6 个 agent 自建的验证脚本
 （better_test.py、test_fix.py 等）——extractPatch 现在自动排除"新增且名字像测试/验证脚本"
 的文件（黄金 patch 从不新增测试文件，排除规则安全）。

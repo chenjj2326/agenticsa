@@ -196,6 +196,10 @@ export async function runTurn(opts: RunTurnOptions): Promise<RunTurnResult> {
   const toolResults: Map<string, ToolResultPart> = new Map();
   // 工具调用关系（callId → name）
   const toolCallNames: Map<string, string> = new Map();
+  // 重复失败熔断：同参同工具连续失败的次数（requests-1724 教训：
+  // 模型幻觉了不存在的代码，同一失败 edit 重试 40 次烧光全部预算）
+  const failStreak: Map<string, number> = new Map();
+  const failSig = (name: string, args: unknown) => name + ":" + JSON.stringify(args);
 
   // 监听 abort
   let aborted = false;
@@ -279,6 +283,18 @@ export async function runTurn(opts: RunTurnOptions): Promise<RunTurnResult> {
                     } else if (result.modelOutput !== null) {
                       outputView = result.modelOutput;
                     }
+                    const sig = failSig(ev.name, ev.args);
+                    if (isError) {
+                      const n = (failStreak.get(sig) ?? 0) + 1;
+                      failStreak.set(sig, n);
+                      if (n >= 2) {
+                        outputView =
+                          String(outputView) +
+                          `\n\nWARNING: this exact tool call has now failed ${n} times in a row with the same error. Retrying it unchanged will fail again. STOP and change strategy: use read() to look at the actual current content, then construct a different edit or a different approach entirely.`;
+                      }
+                    } else {
+                      failStreak.delete(sig);
+                    }
                     const toolResultPart: ToolResultPart = {
                       type: "tool-result",
                       id: callId,
@@ -320,6 +336,28 @@ export async function runTurn(opts: RunTurnOptions): Promise<RunTurnResult> {
                     output: safeMessage,
                     error: true,
                   });
+                  const sig = failSig(ev.name, ev.args);
+                  const n = (failStreak.get(sig) ?? 0) + 1;
+                  failStreak.set(sig, n);
+                  if (n >= 2) {
+                    const warned =
+                      safeMessage +
+                      `\n\nWARNING: this exact tool call has now failed ${n} times in a row with the same error. Retrying it unchanged will fail again. STOP and change strategy: use read() to look at the actual current content, then construct a different edit or a different approach entirely.`;
+                    const part2: ToolResultPart = {
+                      type: "tool-result",
+                      id: callId,
+                      name: ev.name,
+                      output: warned,
+                      error: true,
+                    };
+                    toolResults.set(callId, part2);
+                    opts.onEvent({
+                      type: "tool-result",
+                      callId,
+                      output: warned,
+                      error: true,
+                    });
+                  }
                   // 用户拒绝 → isUserDeclined → halt
                   // 文档 03/11：用户拒绝升级成 defect → halt 整个 loop
                   if (isUserDeclined(e)) {
