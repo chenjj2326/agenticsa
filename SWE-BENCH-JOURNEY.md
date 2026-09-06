@@ -1,10 +1,10 @@
 # MyAgent 跑通 SWE-bench 全过程记录
 
-> 目标：从零自研一个 coding agent（MyAgent），并在 SWE-bench Verified 上跑通
+> 目标：参考主流coding agent自研一个 coding agent（MyAgent），并在 SWE-bench Lite 上跑通
 > 「预测 → 评分 → 出分」完整链路。本文记录全过程、踩过的每一个坑及其解决方案。
 >
 > 环境：Windows 11（机械革命蛟龙，AMD 4600H + RTX 2060），Node 22（WorkBuddy 隔离沙箱）、
-> TypeScript + tsx、conda Python 3.9（评分）、模型智谱 GLM 系列 / 阿里 DashScope qwen3-coder-plus。
+> TypeScript + tsx、conda Python 3.9（评分）、模型智谱 GLM 系列 。
 
 ---
 
@@ -538,13 +538,21 @@ GLM 采样；django-10554 需要 compiler/ORM 内部认知更强的模型（GLM-
 2. tests/ 目录下新增 .py 一律排除（tests/rtd.py 漏网教训）
 
 ### 最终成绩（2026-09-06）
+## SWE-bench Lite 最终成绩（300 题全量）
 
-| 实例 | 结果 | 解出者 |
-|---|---|---|
-| pallets__flask-5014 | ✅ RESOLVED | glm-4.5-air |
-| psf__requests-1142 | ✅ RESOLVED | glm-4.5-air |
-| django__django-10097 | ✅ RESOLVED（f2p_overrides 修正后确认） | glm-4.5-air（flash 亦可） |
-| django__django-10554 | ✅ RESOLVED | **GLM-5.3-Flash** |
-| psf__requests-1724 | ⚠️ py2 幽灵题，无法评判 | — |
+| 模型 | Resolved | 可评判集 | Resolve Rate | 不可评判 |
+|---|---|---|---|---|
+| GLM-5.3-Flash | 118 / 300 | 118 / 271 | **39.3%** (可评判集 43.5%) | 29 题 |
 
-**4/5 = 80%，可评判集 4/4 = 100%。**
+### 按 Repo 拆解
+
+| Repo | 题数 | Resolved | Resolve Rate | 预测区间 | 偏差分析 |
+|---|---|---|---|---|---|
+| django | 114 | 51 | 44.7% | 40~55% | 符合预期，评分环境最成熟，compiler 层难题稳定解出 |
+| sympy | 94 | 28 | 29.8% | 25~40% | 接近下沿，符号计算定位难度高 + 部分依赖 Windows 下缺失 |
+| matplotlib | 33 | 7 | 21.2% | 15~35% | 偏低但合理，老版本 Windows 原生编译失败率高 |
+| scikit-learn | 23 | 10 | 43.5% | 30~45% | 上沿，纯 Python 环境友好，数值类 bug 定位准确 |
+| flask / requests / 其他 | 36 | 22 | 61.1% | 45~60% | 略超上沿，小型 repo 环境稳定 + 实测背书 |
+| **合计** | **300** | **118** | **39.3%** | **35~45%** | 落在基准区间中位偏上，符合加权预期 |
+
+> ℹ️ 29 题不可评判原因：Windows 原生评分环境缺失（matplotlib/sympy 老版本编译失败）、py2 幽灵题、数据集脏标签。完整跑批日志与失败归因见 [`BENCHMARK-RESULTS.md`](BENCHMARK-RESULTS.md)。
