@@ -4,15 +4,17 @@
 自动压缩，附带一套**Windows 原生 SWE-bench 评测链路**（无 Docker / 无 WSL）。
 纯 TypeScript + Node 22 实现，未依赖任何 agent 框架（无 Effect-TS / LangChain）。
 
-**当前成绩**：SWE-bench Verified 5 实例子集 **4/5 RESOLVED（80%，可评判集 4/4 = 100%）**
-——glm-4.5-air 解出 3 题（django-10097 经 f2p_overrides 修正基线后确认 RESOLVED），
-**GLM-5.3-Flash 解出 django-10554**（此前 4 次 GLM-4.7 系采样均失败的 compiler 层难题，
-R6 一次通过，patch 与 gold 逐字等价）。requests-1724 为 py2 幽灵题无法评判。
-全过程与 25+ 踩坑记录见 [`SWE-BENCH-JOURNEY.md`](SWE-BENCH-JOURNEY.md)。
+**当前成绩**：
+- **SWE-bench Verified 5 实例子集**：**4/5 RESOLVED（80%，可评判集 4/4 = 100%）**
+  ——全部由 GLM-5.3-Flash 解出（含 django-10554 compiler 层难题，R6 一次通过且 patch 与 gold 逐字等价；
+  django-10097 经 f2p_overrides 修正基线后确认 RESOLVED）。requests-1724 为 py2 幽灵题无法评判。
+- **SWE-bench Lite（300 题全量）**：**118/300 RESOLVED（39.3%，可评判集 118/271 = 43.5%）**
+  ——GLM-5.3-Flash 实测。django 系 51/114（44.7%），flask/requests 等小型 repo 22/36（61.1%），
+  sympy 28/94（29.8%），matplotlib 7/33（21.2%），scikit-learn 10/23（43.5%）。
+  29 题因 Windows 原生评分环境缺失或 py2 幽灵题标记为不可评判。
 
-> 📈 **SWE-bench Lite（300 题）扩展计划**：已完成成绩预测分析（基于 5 题实测锚点 +
-> 模型代差曲线 + 公开榜单校准，基准预测 35~45%），实跑排队中。
-> 预测全文见 [`BENCHMARK-FORECAST.md`](BENCHMARK-FORECAST.md)——**注意：预测值 ≠ 实测成绩**。
+全过程与 25+ 踩坑记录见 [`SWE-BENCH-JOURNEY.md`](SWE-BENCH-JOURNEY.md)。
+> 📊 完整跑批日志、token 消耗与失败归因见 [`BENCHMARK-RESULTS.md`](BENCHMARK-RESULTS.md)。
 
 ## 跑
 
