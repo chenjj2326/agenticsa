@@ -5,9 +5,6 @@
 纯 TypeScript + Node 22 实现，未依赖任何 agent 框架（无 Effect-TS / LangChain）。
 
 **当前成绩**：
-- **SWE-bench Verified 5 实例子集**：**4/5 RESOLVED（80%，可评判集 4/4 = 100%）**
-  ——全部由 GLM-5.3-Flash 解出（含 django-10554 compiler 层难题，R6 一次通过且 patch 与 gold 逐字等价；
-  django-10097 经 f2p_overrides 修正基线后确认 RESOLVED）。requests-1724 为 py2 幽灵题无法评判。
 - **SWE-bench Lite（300 题全量）**：**118/300 RESOLVED（39.3%，可评判集 118/271 = 43.5%）**
   ——GLM-5.3-Flash 实测。django 系 51/114（44.7%），flask/requests 等小型 repo 22/36（61.1%），
   sympy 28/94（29.8%），matplotlib 7/33（21.2%），scikit-learn 10/23（43.5%）。
