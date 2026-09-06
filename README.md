@@ -21,7 +21,7 @@ npx tsx src/test-e2e.ts        # 端到端冒烟测试（8 场景，mock provide
 npm run typecheck              # 类型检查
 ```
 
-## SWE-bench 快速上手
+## SWE-bench Lite快速上手
 
 ```bash
 # 1. 预测（任意 OpenAI 兼容端点，--base-url 即插即用）
