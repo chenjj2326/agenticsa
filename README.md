@@ -1,6 +1,6 @@
 # MyAgent
 
-从零自研的 coding agent（TypeScript），实现完整的 agent loop、工具系统、上下文管理与
+参考主流 coding agent（Claude Code / opencode 等）机制设计的自研 coding agent（TypeScript），实现完整的 agent loop、工具系统、上下文管理与
 自动压缩，附带一套**Windows 原生 SWE-bench 评测链路**（无 Docker / 无 WSL）。
 纯 TypeScript + Node 22 实现，未依赖任何 agent 框架（无 Effect-TS / LangChain）。
 
