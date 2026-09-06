@@ -504,3 +504,46 @@ R4（glm-4.7-flash，temp 0.7）：**流程全部按设计执行** ✓——12 �
 **结论**：复现闭环提升了流程规范性（4/4 样本都照做），但对 flash 档模型，"定位到正确的
 框架分层"是能力上限而非流程问题。4 样本 4 种修法全错在同一个语义点，停止对该题的
 GLM 采样；django-10554 需要 compiler/ORM 内部认知更强的模型（GLM-5 系 / gpt-5.6-sol 级）。
+
+### 9.2 django-10097 数据集污染翻案 + django-10554 攻克（GLM-5.3-Flash，2026-09-06）
+
+**坑 24：django-10097 的数据集 F2P 是脏的。** 复核发现该实例（URLValidator 修复，gold 仅 562B）
+的 F2P 列表混入 420+ 条无关测试（model_forms/cache/auth 等），这些在 base 上本就通过 →
+按数据集评分必然得到"baseline F2P 全过"的无效基线，此前的 RESOLVED 判定建立在空集上。
+真正的 F2P 是 test_patch 新增 6 个非法 URL 后参数化生成的 6 个动态测试
+（`validators.tests.TestSimpleValidators.test_URLValidator_raises_error_352..357`）。
+处置：`f2p_overrides.json` 人工写入环境实证的 F2P，评分器优先采用。双向验证：
+- base+test_patch：6 条全失败 ✓（基线有效）
+- gold patch：6 条全通过 ✓
+- air patch（22537B）：RESOLVED ✓；flash patch（6391B）：同样 RESOLVED
+- 另发现 2 条（test_156/157）连 gold 都修不掉 → Windows CRLF/git autocrlf 环境伪影，不计入
+- 复盘中的工具坑：`git apply | head` 会因 SIGPIPE 静默丢弃 patch 应用（第二次踩
+  "管道吃退出码"坑），教训：**验证类命令永远不要接 head/tail**
+
+**GLM-5.3-Flash（R6）攻克 django-10554。** 用户充值后切 glm-5.3-flash（1M 上下文思考模型），
+复现闭环提示词 + temp 0.7，47 分钟产出 3173B patch：
+
+| 文件 | 修改 |
+|---|---|
+| sql/compiler.py | get_order_by() 对无别名的结果集外列自动 add_select_col（与 gold 逐字等价） |
+| sql/query.py | 新增 Query.add_select_col()（与 gold 逐字等价） |
+| tests/rtd.py | agent 自建辅助脚本（污染，已加 extractPatch 规则排除） |
+
+评分：F2P 2/2 ✓、P2P 23 条零回归 ✓ → **RESOLVED**。此前 4 次 GLM-4.7 系采样全军覆没的
+"compiler 层定位"，GLM-5.3-Flash 一次通过——模型代差是决定性因素，提示词机制是辅助。
+
+**extractPatch 排除规则升级**（两轮实战迭代）：
+1. 仓库根目录新增 .py 一律排除（analyze_regex.py / better_test.py 漏网教训）
+2. tests/ 目录下新增 .py 一律排除（tests/rtd.py 漏网教训）
+
+### 最终成绩（2026-09-06）
+
+| 实例 | 结果 | 解出者 |
+|---|---|---|
+| pallets__flask-5014 | ✅ RESOLVED | glm-4.5-air |
+| psf__requests-1142 | ✅ RESOLVED | glm-4.5-air |
+| django__django-10097 | ✅ RESOLVED（f2p_overrides 修正后确认） | glm-4.5-air（flash 亦可） |
+| django__django-10554 | ✅ RESOLVED | **GLM-5.3-Flash** |
+| psf__requests-1724 | ⚠️ py2 幽灵题，无法评判 | — |
+
+**4/5 = 80%，可评判集 4/4 = 100%。**

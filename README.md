@@ -3,10 +3,11 @@
 按 opencode 架构文档实现的 OpenCode 风格 coding agent（TypeScript），附带一套
 **Windows 原生 SWE-bench 评测链路**（无 Docker / 无 WSL）。
 
-**当前成绩**：SWE-bench Verified 5 实例子集，glm-4.5-air（免费档）**3/5 RESOLVED**
-（glm-4-flash 同子集 0/5 对照）。glm-4.7 / glm-4.7-flash 攻坚 django-10554 记录见
-[`SWE-BENCH-JOURNEY.md`](SWE-BENCH-JOURNEY.md) §9（三次尝试均 FAILED：GLM 家族系统性
-定位不到 compiler 层的 ORDER BY 补列修法）。
+**当前成绩**：SWE-bench Verified 5 实例子集 **4/5 RESOLVED（80%，可评判集 4/4 = 100%）**
+——glm-4.5-air 解出 3 题（django-10097 经 f2p_overrides 修正基线后确认 RESOLVED），
+**GLM-5.3-Flash 解出 django-10554**（此前 4 次 GLM-4.7 系采样均失败的 compiler 层难题，
+R6 一次通过，patch 与 gold 逐字等价）。requests-1724 为 py2 幽灵题无法评判。
+全过程与 25+ 踩坑记录见 [`SWE-BENCH-JOURNEY.md`](SWE-BENCH-JOURNEY.md)。
 
 ## 跑
 

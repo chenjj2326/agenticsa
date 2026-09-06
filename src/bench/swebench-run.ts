@@ -275,7 +275,10 @@ async function extractPatch(wtDir: string): Promise<string> {
             // 名字黑名单追不完——analyze_regex.py / better_test.py 都漏过
             (!f.includes("/") && /\.py$/i.test(f)) ||
             /(^|\/)(test|reproduce|check|verify|debug|simple)[\w.-]*\.py$/i.test(f) ||
-            /_test\.py$/i.test(f)
+            /_test\.py$/i.test(f) ||
+            // tests/ 目录下的新增 .py 也是 agent 临时脚本（gold 的 F2P 测试由评分器
+            // 单独打 test_patch，模型 patch 里不应出现；glm-5.3-flash 混入过 tests/rtd.py）
+            /(^|\/)tests\/[\w./-]*\.py$/i.test(f)
         );
       for (const f of junk) {
         await sh("git", ["reset", "-q", "HEAD", "--", f], { cwd: wtDir });
