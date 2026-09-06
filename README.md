@@ -10,6 +10,10 @@
 R6 一次通过，patch 与 gold 逐字等价）。requests-1724 为 py2 幽灵题无法评判。
 全过程与 25+ 踩坑记录见 [`SWE-BENCH-JOURNEY.md`](SWE-BENCH-JOURNEY.md)。
 
+> 📈 **SWE-bench Lite（300 题）扩展计划**：已完成成绩预测分析（基于 5 题实测锚点 +
+> 模型代差曲线 + 公开榜单校准，基准预测 35~45%），实跑排队中。
+> 预测全文见 [`BENCHMARK-FORECAST.md`](BENCHMARK-FORECAST.md)——**注意：预测值 ≠ 实测成绩**。
+
 ## 跑
 
 ```bash
