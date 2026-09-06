@@ -1,4 +1,4 @@
-# MyAgent 跑通 SWE-bench 全过程记录
+# MyAgent 跑通 SWE-bench Lite全过程记录
 
 > 目标：参考主流coding agent自研一个 coding agent（MyAgent），并在 SWE-bench Lite 上跑通
 > 「预测 → 评分 → 出分」完整链路。本文记录全过程、踩过的每一个坑及其解决方案。
