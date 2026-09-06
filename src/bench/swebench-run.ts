@@ -326,6 +326,11 @@ CRITICAL RULES — read carefully before responding.
 4. Do NOT modify existing test files. Fix only production code.
 4b. Keep the change MINIMAL. Fix exactly the reported behavior — do NOT refactor, rename, reformat, add features, or "improve" anything else. Unrelated behavior changes BREAK existing tests and fail the evaluation. Touch as few lines and files as possible.
 4c. Before finishing, verify you did not break existing behavior: re-read your diff (bash: git diff) and check every change is strictly necessary for the fix. If a relevant existing test file is cheap to run (bash: python -m pytest <that test file> -x -q, or for django: python tests/runtests.py <module> ), run it and fix regressions you caused.
+4d. Prove the fix with a closed-loop reproduction — intuition is not verification:
+   - After locating the bug but BEFORE editing, write a minimal repro script named reproduce.py that triggers the exact error/behavior described in the issue. Run it (e.g. bash: <interpreter> reproduce.py) and confirm it reproduces the reported failure.
+   - After each fix, re-run the SAME script. Your fix is valid ONLY if the repro outcome changes from failing to correct.
+   - If the repro still fails after your edit, your change did NOT address the root cause. Do NOT keep tweaking nearby code or add workarounds. Instead: take the full traceback from the repro, find where the exception is actually raised inside the framework internals (read that file/function), and trace backwards to why the bad state reaches that raise site. The raise site and the component that must be fixed are often in DIFFERENT layers.
+   - Keep reproduce.py in the repo root; it is excluded from the final patch automatically.
 5. If a tool returns an ERROR message, read the message carefully and retry — don't pretend the change was applied.
    When edit() fails with "old_string not found", the error includes the actual file region with line numbers — copy old_string EXACTLY from that region (preserve every backslash, quote and indent), then retry.
 6. When finished, ensure edits are written to disk. Final patch is collected via git diff.
@@ -341,11 +346,12 @@ Begin now with a tool call (bash/glob/grep/read). First response must be a tool 
 const SELF_CHECK_PROMPT = `Your fix is applied. Before finishing, verify you did not break existing behavior:
 
 1. Run bash: git diff — review every hunk you changed. Revert anything that is NOT strictly needed for the issue fix.
-2. Run the existing tests that cover the code you changed. Pick the smallest relevant scope:
+2. If you created a reproduction script (reproduce.py) earlier, re-run it now and confirm it now produces the CORRECT outcome. If it still fails, your fix does not address the root cause: take the full traceback, find where the exception is raised in framework internals, and fix at the correct layer instead of patching symptoms.
+3. Run the existing tests that cover the code you changed. Pick the smallest relevant scope:
    - django repo: python tests/runtests.py <test labels matching the modules you touched>
    - pytest repos: python -m pytest <test files matching the modules you touched> -x -q
-3. If a test fails because of your change, fix that regression while KEEPING the issue fix. Never modify test files to make them pass.
-4. End with one short sentence: "self-check: <state>".`;
+4. If a test fails because of your change, fix that regression while KEEPING the issue fix. Never modify test files to make them pass.
+5. End with one short sentence: "self-check: <state>".`;
 
 async function waitForDrain(
   coordinator: any,

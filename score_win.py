@@ -38,6 +38,8 @@ OUTDIR = os.environ.get("OUTDIR", os.path.join(tempfile.gettempdir(), "swebench-
 #   C:\...\.conda\envs\*  —— C 盘用户目录下的 conda 环境会被宿主虚拟化层吃掉文件（见坑 19）
 def _find_swe39():
     candidates = (
+        # py39raw（copytree 复制）最稳——conda create 部署的 swe39 环境会再次被掏空（坑 19 复发）
+        r"E:\swe-envs\py39raw\python.exe",
         r"E:\swe-envs\swe39\python.exe",
         r"C:\Users\33378\.conda\envs\swe39b\python.exe",
         r"C:\Users\33378\.conda\envs\swe39\python.exe",

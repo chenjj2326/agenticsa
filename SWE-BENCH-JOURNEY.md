@@ -447,3 +447,60 @@ SWE39_PYTHON="E:\swe-envs\py39raw\python.exe" python score_win.py \
       官方 Docker harness 在 Linux 机器上跑更省力）
 - [ ] 多模型对照表：glm-4-flash / glm-4.5 / qwen3-coder-plus 各跑同一子集出 resolve rate
 - [ ] 把 §5 的坑固化为 runner/score 的自检清单（环境预检、key 预检、余额预检）
+
+---
+
+## 9. GLM-4.7 攻坚 django-10554（2026-09-06）
+
+glm-4.7（2025-12 发布，SWE-bench Verified 官方 73.8%，对标 Claude Sonnet 4.5）上线后单刷
+django-10554。provider 适配：glm-4.7 系思考模型 max_tokens 保底 16384（官方 SWE-bench
+Verified 设置）、上下文 200K（`zhipu-provider.ts`）。
+
+| 尝试 | 模型 | temp | 结果 | 修法 |
+|---|---|---|---|---|
+| R1 | glm-4.7（付费） | 0.1 | FAILED（P2P 零回归） | query.py：combined_queries 改 clone() 防 query 共享突变 |
+| R2 | glm-4.7（付费） | 0.7 | 74s 秒空——**1113 余额耗尽**（R1 烧掉 ~5.9M in token） | — |
+| R3 | glm-4.7-flash（免费） | 0.7 | FAILED（P2P 零回归） | query.py：对 combined_queries 逐个 clear_ordering |
+
+**核心发现（坑 23）——GLM 家族对本题的系统性盲区**：
+- 题 bug 真身在 `django/db/models/sql/compiler.py get_order_by()`：union 结果集外的列排序
+  时应自动补 select 列（`query.add_select_col`，gold patch 还在 `sql/query.py` 加了该方法），
+  而不是抛 `ORDER BY term does not match any column`
+- 三次独立采样（两代模型、两种温度）全部收敛在 `query.py` 层修组合查询突变/排序清理，
+  **没有一次定位到 compiler 层**——这是模型对 ORM 内部分层认知的偏差，不是采样运气
+- agent 全程看不到评测 test_patch（评分器最后才应用），自查只能跑自己挑的旧测试，
+  因此"修错方向"这件事无法在 agent 内部闭环暴露；要突破需要模型自己写出
+  "union 后对非 select 列 order_by"的复现用例并发现报错依旧
+
+**其他记录**：
+- 坑 19 复发 + 固化：score_win.py 的 `_find_swe39()` 探测到 `E:/swe-envs/swe39` 又被掏空
+  （Lib 仅 26 项，`No module named 'encodings'`）→ 评分假 ENV_BROKEN。已把探测顺序改为
+  py39raw（copytree 环境）优先
+- 免费余额策略验证：glm-4.7-flash 免费（定价页确认），余额耗尽的 key 仍可跑免费模型
+- R1 成本实测：约 5.9M input / 39K output token ≈ 12 元级；付费模型单题攻坚前先看余额
+  （`curl chat/completions` 一个 1-token 请求即可探 1113）
+
+**状态**：django-10554 仍是 3/5 集合里唯一的真失败题（requests-1724 为 py2 幽灵题等效跳过）。
+下一步要么充值后换更强模型（gpt-5.6-sol / GLM-5 系），要么在提示词里引导 agent 先写
+"报错复现脚本→修完复跑复现脚本"的闭环（但需注意不能泄露评测真值）。
+
+### 9.1 复现闭环提示词实验（R4，2026-09-06）
+
+针对 §9 的"修错方向无法自察"问题，给提示词加了合法的闭环机制（不接触评测真值）：
+
+- 主任务规则 4d：定位后先写 `reproduce.py` 复现报错 → 修完**复跑同一脚本** → 若依旧失败，
+  禁止原地补丁，必须沿 traceback 找框架内部真正的 raise 点（提示"raise 点和该修的层
+  经常不在同一层"）
+- 自查提示词同步加第 2 步：复跑 reproduce.py 验证结果翻转
+
+R4（glm-4.7-flash，temp 0.7）：**流程全部按设计执行** ✓——12 分钟写复现脚本、复现确认、
+修改、复跑复现、自查。patch 782B。结果仍 FAILED，但有两点变化：
+
+1. 修的位置**首次进入 compiler.py**（SQLCompiler.combine 清理子查询 ordering），
+   比前三次的 query.py 层更接近病灶
+2. 依然没解出正确语义：gold 修法是 get_order_by() 里对"ORDER BY 引用结果集外的列"
+   自动 add_select_col 补列重排，而不是清理 ordering
+
+**结论**：复现闭环提升了流程规范性（4/4 样本都照做），但对 flash 档模型，"定位到正确的
+框架分层"是能力上限而非流程问题。4 样本 4 种修法全错在同一个语义点，停止对该题的
+GLM 采样；django-10554 需要 compiler/ORM 内部认知更强的模型（GLM-5 系 / gpt-5.6-sol 级）。

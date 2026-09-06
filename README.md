@@ -4,8 +4,9 @@
 **Windows 原生 SWE-bench 评测链路**（无 Docker / 无 WSL）。
 
 **当前成绩**：SWE-bench Verified 5 实例子集，glm-4.5-air（免费档）**3/5 RESOLVED**
-（glm-4-flash 同子集 0/5 对照）。全过程与 20+ 踩坑记录见
-[`SWE-BENCH-JOURNEY.md`](SWE-BENCH-JOURNEY.md)。
+（glm-4-flash 同子集 0/5 对照）。glm-4.7 / glm-4.7-flash 攻坚 django-10554 记录见
+[`SWE-BENCH-JOURNEY.md`](SWE-BENCH-JOURNEY.md) §9（三次尝试均 FAILED：GLM 家族系统性
+定位不到 compiler 层的 ORDER BY 补列修法）。
 
 ## 跑
 
@@ -44,7 +45,7 @@ E:\swe-envs\py39raw\python.exe -m pip install pytest==7.4.4 sqlparse asgiref tzd
 | provider | 接法 | 说明 |
 | --- | --- | --- |
 | `mock` | 默认 | 完整工具循环 / 权限 / 上下文 / 压缩，不耗 API |
-| `zhipu` | `--provider zhipu` + `MYAGENT_API_KEY` | 智谱原生机（glm-4.5 系思考模型已适配 max_tokens） |
+| `zhipu` | `--provider zhipu` + `MYAGENT_API_KEY` | 智谱原生机（glm-4.5/4.7 系思考模型已适配 max_tokens 8192/16384） |
 | `openai` | `--provider openai --base-url <endpoint>` + key | 任意 OpenAI 兼容端点（DashScope / DeepSeek / SiliconFlow / 内网网关…） |
 
 ## agent 内建评测向加固
