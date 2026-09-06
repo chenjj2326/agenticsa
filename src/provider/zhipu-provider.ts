@@ -64,6 +64,9 @@ export class ZhiPuProvider implements LLMProvider {
   }
 
   contextLimit(model: string): number | undefined {
+    if (model.startsWith("glm-5")) {
+      return 1_000_000;
+    }
     if (model === "glm-4.7" || model === "glm-4.7-flash" || model === "glm-4.7-flashx") {
       return 200_000;
     }
@@ -109,11 +112,12 @@ export class ZhiPuProvider implements LLMProvider {
       body.stream_options = { include_usage: true };
     }
 
-    // 思考模型（glm-4.5/4.7 系）的 reasoning_content 也计入 max_tokens：
+    // 思考模型（glm-4.5/4.7/5 系）的 reasoning_content 也计入 max_tokens：
     // 不设或设太小会导致 content 为空、finish_reason=length。给个保底大值。
     // glm-4.7 官方 SWE-bench Verified 设置：max new tokens 16384。
     body.max_tokens =
-      req.maxTokens ?? (model.startsWith("glm-4.7") ? 16384 : 8192);
+      req.maxTokens ??
+      (model.startsWith("glm-4.7") || model.startsWith("glm-5") ? 16384 : 8192);
 
     const controller = new AbortController();
     const abortHandler = () => controller.abort();

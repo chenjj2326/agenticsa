@@ -270,6 +270,10 @@ async function extractPatch(wtDir: string): Promise<string> {
         .filter(
           (f) =>
             f &&
+            // 结构性规则：仓库根目录新增的 .py 一定是 agent 临时脚本
+            // （django/flask/requests 的真修复都在包目录 django/ src/ requests/ 下），
+            // 名字黑名单追不完——analyze_regex.py / better_test.py 都漏过
+            (!f.includes("/") && /\.py$/i.test(f)) ||
             /(^|\/)(test|reproduce|check|verify|debug|simple)[\w.-]*\.py$/i.test(f) ||
             /_test\.py$/i.test(f)
         );

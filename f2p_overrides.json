@@ -1,0 +1,10 @@
+{
+  "django__django-10097": [
+    "validators.tests.TestSimpleValidators.test_URLValidator_raises_error_352",
+    "validators.tests.TestSimpleValidators.test_URLValidator_raises_error_353",
+    "validators.tests.TestSimpleValidators.test_URLValidator_raises_error_354",
+    "validators.tests.TestSimpleValidators.test_URLValidator_raises_error_355",
+    "validators.tests.TestSimpleValidators.test_URLValidator_raises_error_356",
+    "validators.tests.TestSimpleValidators.test_URLValidator_raises_error_357"
+  ]
+}

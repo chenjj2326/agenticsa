@@ -164,6 +164,18 @@ def filter_django_labels(tests):
     return out
 
 
+# 坑 24：部分数据集行的 F2P/P2P 列表被污染（django-10097 的 F2P 混入 420+ 条无关且
+# base 上本就通过的测试，真正的 F2P 是 test_patch 新增 URL 条目参数化的 6 个动态测试）。
+# 这类实例按数据集评分会得到无效 baseline（F2P 在 base 上全过 → ENV_BROKEN）。
+# 处置：人工在干净 worktree 上做 base/gold 双向验证，把环境实证的 F2P 写进
+# f2p_overrides.json（instance_id → 可执行 label 列表），评分器优先采用。
+F2P_OVERRIDES = {}
+_ov = os.path.join(PROJ, "f2p_overrides.json")
+if os.path.isfile(_ov):
+    with open(_ov, encoding="utf-8") as f:
+        F2P_OVERRIDES = json.load(f)
+
+
 def build_test_cmds(py: str, repo: str, tests):
     is_django = "django" in repo.lower()
     if is_django:
@@ -242,6 +254,10 @@ def main():
         if "django" in repo.lower():
             f2p = filter_django_labels(f2p)
             p2p = filter_django_labels(p2p)
+        # override 放在过滤之后：override 存的是最终可执行 label，不再过格式过滤
+        if iid in F2P_OVERRIDES:
+            f2p = list(F2P_OVERRIDES[iid])
+            print(f"  [f2p override] using {len(f2p)} env-verified labels from f2p_overrides.json")
         print(f"[{iid}]  version={inst.get('version')}  patch={len(patch)}B  repo={repo}  base={base[:12]}")
         print(f"  python={py}")
         print(f"  FAIL_TO_PASS={len(f2p)}  PASS_TO_PASS={len(p2p)}")
