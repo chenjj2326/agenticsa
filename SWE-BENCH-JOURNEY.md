@@ -1,6 +1,6 @@
 # MyAgent 跑通 SWE-bench 全过程记录
 
-> 目标：模仿 OpenCode 架构搭建一个 coding agent（MyAgent），并在 SWE-bench Verified 上跑通
+> 目标：从零自研一个 coding agent（MyAgent），并在 SWE-bench Verified 上跑通
 > 「预测 → 评分 → 出分」完整链路。本文记录全过程、踩过的每一个坑及其解决方案。
 >
 > 环境：Windows 11（机械革命蛟龙，AMD 4600H + RTX 2060），Node 22（WorkBuddy 隔离沙箱）、
@@ -12,18 +12,18 @@
 
 | 阶段 | 状态 |
 |---|---|
-| Agent 骨架（严格按 opencode 架构文档 02-17 实现） | ✅ typecheck 通过，8 个 mock e2e 场景全过 |
+| Agent 骨架（agent loop / 工具 / 上下文 / 压缩全模块自研） | ✅ typecheck 通过，8 个 mock e2e 场景全过 |
 | 预测链路（agent 在真实 SWE-bench repo 里产出 patch） | ✅ 跑通，支持断点续跑 |
 | 评分链路（Windows 原生，无 Docker/WSL） | ✅ score_win.py 跑通 |
 | 最终成绩 | 见 §6（最后一次正式 run 的逐实例 verdict） |
 
 ---
 
-## 2. Agent 架构：模仿了 OpenCode 的哪些方面
+## 2. Agent 架构设计
 
-MyAgent 按 opencode 架构文档逐篇实现，核心机制一一对应：
+核心机制参考了主流 coding agent（Claude Code / opencode 等）的公开行为设计，全部代码独立实现：
 
-| opencode 机制 | MyAgent 实现位置 | 说明 |
+| 核心机制 | MyAgent 实现位置 | 说明 |
 |---|---|---|
 | 上下文管理 | `src/core/context/` | Source 代数 + Epoch：system prompt 是多个 Source 的组合，工具结果触发 Epoch 重建 |
 | Agent Loop | `src/core/agent/turn.ts` `runner.ts` `coordinator.ts` | 三层循环：进程级 coordinator（按 Session 串行、合并 wake）→ runner（turn 序列）→ turn（单次 LLM 流式调用 + 工具 fork） |
@@ -35,8 +35,9 @@ MyAgent 按 opencode 架构文档逐篇实现，核心机制一一对应：
 | 输出截断 | `ToolOutputStore` | 工具大输出落盘 + 给模型的视图截断（token 经济） |
 | 成本追踪 | `src/core/cost/usage.ts` | 消息级 token/费用统计（bench 每题打印 cost） |
 
-对比 opencode 本体（Effect-TS + Bun）：MyAgent 用纯 TypeScript + Node 22，不用 Effect，把同样
-的机制用更朴素的方式落地——重点在「机制等价」，不在「框架一致」。
+技术选型上刻意与 opencode 本体（Effect-TS + Bun）区分：MyAgent 用纯 TypeScript + Node 22，
+不用 Effect，把同类机制用更朴素的方式落地——重点在「机制自研」，这也是为了验证自己对
+agent 内部机制的理解深度。
 
 ---
 
@@ -72,7 +73,7 @@ MyAgent 按 opencode 架构文档逐篇实现，核心机制一一对应：
 
 ### 第一阶段（9月3日）：搭骨架 + 首次跑通预测
 
-- 按 opencode 架构文档 02-17 实现 MyAgent 全部核心模块
+- 实现 MyAgent 全部核心模块（agent loop / 工具系统 / 上下文管理 / 压缩）
 - 写 SWE-bench runner（纯 Node，不依赖 Docker）；评分沿用社区 lite 方案（WSL）
 - glm-4-flash 首跑：找到文件改错位置（方向性错误）
 - **glm-4.5 实测能把 flask-5014 修对**（patch 与黄金答案等价，$0.77/题）

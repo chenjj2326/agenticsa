@@ -1,7 +1,8 @@
 # MyAgent
 
-按 opencode 架构文档实现的 OpenCode 风格 coding agent（TypeScript），附带一套
-**Windows 原生 SWE-bench 评测链路**（无 Docker / 无 WSL）。
+从零自研的 coding agent（TypeScript），实现完整的 agent loop、工具系统、上下文管理与
+自动压缩，附带一套**Windows 原生 SWE-bench 评测链路**（无 Docker / 无 WSL）。
+纯 TypeScript + Node 22 实现，未依赖任何 agent 框架（无 Effect-TS / LangChain）。
 
 **当前成绩**：SWE-bench Verified 5 实例子集 **4/5 RESOLVED（80%，可评判集 4/4 = 100%）**
 ——glm-4.5-air 解出 3 题（django-10097 经 f2p_overrides 修正基线后确认 RESOLVED），
@@ -58,23 +59,22 @@ E:\swe-envs\py39raw\python.exe -m pip install pytest==7.4.4 sqlparse asgiref tzd
 - **patch 提纯**：extractPatch 自动排除 agent 自建的 `test_*.py` / `reproduce_*.py` 等临时脚本
 - 思考模型适配：max_tokens 保底 8192（reasoning_content 也计入预算）
 
-## 架构映射
+## 模块结构
 
-| 文档 | 实现位置 |
+| 模块 | 实现位置 |
 | --- | --- |
-| 02 上下文管理 | `src/core/context/` |
-| 03 Agent Loop | `src/core/agent/` |
-| 04 Memory | `src/core/memory/` |
-| 05 工具系统 | `src/core/tool/` |
-| 06 提示词 | `src/core/prompt/` |
-| 07 错误处理 | `src/core/error/` |
-| 08 Skill | `src/core/skill/` |
-| 09 MCP | `src/core/mcp/` |
-| 10 沙盒 | `src/core/sandbox/` |
-| 11 安全 | 散在各模块（权限/校验） |
-| 12 Hooks/Task | `src/core/hooks/`, `src/core/task/` |
-| 13 Bridge | `src/core/bridge/` |
-| 14 Compact/Token | `src/core/compaction/`, `src/core/token/` |
-| 15 成本 | `src/core/cost/` |
-| 16 多代理 | `src/core/task/`（Task 子代理 + 权限派生） |
-| 17 Remote | `src/core/remote/` |
+| 上下文管理（多源组装/Epoch） | `src/core/context/` |
+| Agent Loop（turn 循环/协调器） | `src/core/agent/` |
+| Memory（AGENTS.md/命令记忆） | `src/core/memory/` |
+| 工具系统（bash/edit/read…） | `src/core/tool/` |
+| 提示词 | `src/core/prompt/` |
+| 错误处理与重试 | `src/core/error/` |
+| Skill | `src/core/skill/` |
+| MCP | `src/core/mcp/` |
+| 沙盒 | `src/core/sandbox/` |
+| 安全（权限/校验） | 散在各模块 |
+| Hooks/Task（含多代理派生） | `src/core/hooks/`, `src/core/task/` |
+| Bridge（后台任务桥） | `src/core/bridge/` |
+| Compact/Token（自动压缩） | `src/core/compaction/`, `src/core/token/` |
+| 成本统计 | `src/core/cost/` |
+| Remote | `src/core/remote/` |

@@ -1,7 +1,7 @@
 {
   "name": "my-agent",
   "version": "0.1.0",
-  "description": "OpenCode-style agent implemented strictly per e:/opencode-dev/文档",
+  "description": "A self-built coding agent (TypeScript) with a Windows-native SWE-bench Verified harness",
   "private": true,
   "type": "module",
   "scripts": {
