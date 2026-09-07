@@ -55,8 +55,18 @@ PY_MAP = {
     "django": PY39,
     "requests": PY39,
     "flask": PY39,
+    # Lite 扩展：专用环境（env_prep.py 预装依赖，评分时不再跑 pip，避免评分期写入）
+    "sympy": r"E:\swe-envs\sympy-env\python.exe",
+    "sphinx": r"E:\swe-envs\sphinx-env\python.exe",
+    "pytest": r"E:\swe-envs\pytest-env\python.exe",
+    "xarray": r"E:\swe-envs\xarray-env\python.exe",
+    "seaborn": r"E:\swe-envs\seaborn-env\python.exe",
+    "pylint": r"E:\swe-envs\pylint-env\python.exe",
     "default": PY39,
 }
+
+# 有 C 扩展的 repo：PYTHONPATH 直挂无法生效（需要编译），暂不评分
+COMPILED_REPOS = ("matplotlib", "scikit-learn", "astropy")
 
 os.makedirs(OUTDIR, exist_ok=True)
 
@@ -181,6 +191,9 @@ def build_test_cmds(py: str, repo: str, tests):
     if is_django:
         args = [_django_label(t) for t in tests]
         return [py, "tests/runtests.py", "--verbosity", "2"] + args
+    # sympy：数据集给的是裸测试名（如 test_ccode_Relational），用它自带的 bin/test 按名全库搜索
+    if "sympy" in repo.lower():
+        return [py, "bin/test", *tests]
     out_args = []
     for t in tests:
         if "::" in t:
@@ -250,6 +263,10 @@ def main():
         p2p = decode_list(inst.get("PASS_TO_PASS"))
         repo = inst["repo"]
         base = inst["base_commit"]
+        if any(k in repo.lower() for k in COMPILED_REPOS):
+            print(f"[{iid}] COMPILED-REPO-UNSUPPORTED ({repo}) -> 需要 MSVC 编译环境，暂不评分")
+            summary.append(f"{iid}: SKIP (compiled repo, no MSVC)")
+            continue
         py = pick_python(repo)
         if "django" in repo.lower():
             f2p = filter_django_labels(f2p)
@@ -296,6 +313,12 @@ def main():
         import_path = wt
         if os.path.isdir(os.path.join(wt, "src")):
             import_path = os.path.join(wt, "src")
+        # matplotlib 是 lib 布局（repo 源码在 lib/matplotlib）
+        if "matplotlib" in repo.lower() and os.path.isdir(os.path.join(wt, "lib")):
+            import_path = os.path.join(wt, "lib")
+
+        # 专用环境的 repo：依赖已由 env_prep.py 预装，评分期不再 pip（避免评分期写入环境）
+        dedicated = py != PY39
 
         if is_django:
             req = os.path.join(wt, "tests", "requirements", "py3.txt")
@@ -316,8 +339,11 @@ def main():
                         "sqlparse", "asgiref", "tzdata"], timeout=300)
                 print(f"  django fallback deps exit={r.returncode}")
         else:
-            r = sh([py, "-m", "pip", "install", *PIP_MIRROR, "--quiet", "pytest==7.4.4"], timeout=300)
-            print(f"  pytest==7.4.4 exit={r.returncode}")
+            if not dedicated:
+                r = sh([py, "-m", "pip", "install", *PIP_MIRROR, "--quiet", "pytest==7.4.4"], timeout=300)
+                print(f"  pytest==7.4.4 exit={r.returncode}")
+            else:
+                print("  dedicated env: deps preinstalled, skip pip")
             if "flask" in repo.lower():
                 r = sh([py, "-m", "pip", "install", *PIP_MIRROR, "--quiet", "--upgrade",
                         "Werkzeug>=2.1,<3"], cwd=wt, timeout=300)
